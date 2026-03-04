@@ -1,0 +1,10 @@
+name: ItemBan
+version: '1.0'
+main: me.Iretemi.itemBan.ItemBan
+api-version: '1.21'
+authors: [ Iretemi Ogunlaja // AmethystMC.dev ]
+description: Item Ban Plugin
+commands:
+  ItemBan:
+    description: Item Ban Command
+    usage: /ItemBan [reload | unban | list | ban]

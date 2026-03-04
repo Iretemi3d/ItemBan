@@ -1,0 +1,12 @@
+# Forbidden item: material name, Advised to edit this section through server commands
+forbidden-items:
+  - BARRIER
+
+# Item limits: material name -> max amount a player can hold
+item-limits:
+  ENDER_PEARL: 8
+  WIND_CHARGE: 64
+  CHORUS_FRUIT: 16
+  GOLDEN_APPLE: 128        # 2 stacks
+  ENCHANTED_GOLDEN_APPLE: 2
+  EXPERIENCE_BOTTLE: 192   # 3 stacks

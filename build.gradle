@@ -1,0 +1,107 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.6.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id("xyz.jpenilla.run-paper") version "2.3.1"
+}
+
+group = 'me.Iretemi'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "papermc-repo"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+}
+
+dependencies {
+    compileOnly("io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT")
+}
+
+tasks {
+    runServer {
+        // Configure the Minecraft version for our task.
+        // This is the only required configuration besides applying the plugin.
+        // Your plugin's jar (or shadowJar if present) will be used automatically.
+        minecraftVersion("1.21")
+    }
+}
+
+def targetJavaVersion = 21
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        options.release.set(targetJavaVersion)
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
+
+tasks.register('obfuscate', proguard.gradle.ProGuardTask) {
+    // Input: the compiled jar
+    injars tasks.jar.archiveFile
+    // Output: obfuscated jar
+    outjars layout.buildDirectory.file("libs/${project.name}-${project.version}-obfuscated.jar")
+
+    // Include the Java runtime
+    libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod"
+    libraryjars "${System.getProperty('java.home')}/jmods/java.logging.jmod"
+
+    // Include Paper API as library (not obfuscated)
+    configurations.compileClasspath.files.each { libraryjars it }
+
+    // Keep only the class NAME of ItemBan (Bukkit needs it via plugin.yml)
+    // but obfuscate its fields, private methods, and inner classes
+    keep 'public class me.Iretemi.itemBan.ItemBan extends org.bukkit.plugin.java.JavaPlugin'
+
+    // Keep Bukkit interface methods that must match exact signatures
+    keepclassmembers 'class me.Iretemi.itemBan.ItemBan { \
+        public void onEnable(); \
+        public void onDisable(); \
+        public boolean onCommand(org.bukkit.command.CommandSender, org.bukkit.command.Command, java.lang.String, java.lang.String[]); \
+    }'
+
+    // Keep all @EventHandler annotated methods (Bukkit uses reflection to call them)
+    keepclassmembers 'class me.Iretemi.itemBan.** { \
+        @org.bukkit.event.EventHandler *; \
+    }'
+
+    // Keep Metrics class and all inner classes completely untouched
+    keep 'class me.Iretemi.itemBan.Metrics { *; }'
+    keep 'class me.Iretemi.itemBan.Metrics$* { *; }'
+
+    // Keep UpdateChecker class completely untouched
+    keep 'class me.Iretemi.itemBan.UpdateChecker { *; }'
+
+    keepattributes '*Annotation*'
+    dontwarn
+    dontoptimize
+
+    dependsOn tasks.jar
+}
